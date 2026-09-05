@@ -80,6 +80,7 @@ keystrokes — no modifier keys, since the menu bar is hidden while browsing.
 | `L` | Set a session location label (appended to the filed path) |
 | `P` | Choose/change the library home folder |
 | `D` | Make Halide Viewer the default app for `.nef` files |
+| `E` | Toggle the EXIF info panel (also shows temporarily while the cursor is at the right edge of the screen) |
 
 The first time you file a photo into the library, you'll be prompted to
 choose a library home folder. Filed photos land at

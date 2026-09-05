@@ -10,6 +10,8 @@
 	<string>Halide Viewer</string>
 	<key>CFBundleDisplayName</key>
 	<string>Halide Viewer</string>
+	<key>CFBundleIconFile</key>
+	<string>Halide</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

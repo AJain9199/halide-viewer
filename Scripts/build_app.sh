@@ -14,6 +14,7 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp ".build/release/${APP_NAME}" "$APP_BUNDLE/Contents/MacOS/${APP_NAME}"
 cp "Sources/HalideViewer/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
+cp "Resources/AppIcon/Halide.icns" "$APP_BUNDLE/Contents/Resources/Halide.icns"
 
 echo "Ad-hoc code signing..."
 codesign --force --deep --sign - "$APP_BUNDLE"

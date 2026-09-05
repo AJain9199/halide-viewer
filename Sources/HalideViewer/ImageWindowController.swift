@@ -26,6 +26,7 @@ final class ImageWindowController: NSWindowController {
         window.hasShadow = false
         window.level = .normal
         window.isReleasedWhenClosed = false
+        window.acceptsMouseMovedEvents = true
 
         let viewController = ImageViewController(browser: browser)
         window.contentViewController = viewController

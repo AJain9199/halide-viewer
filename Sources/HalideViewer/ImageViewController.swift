@@ -5,7 +5,16 @@ final class ImageViewController: NSViewController {
     let browser: FolderBrowser
     let canvasView = ImageCanvasView()
     private let hudLabel = NSTextField(labelWithString: "")
+    private let exifOverlay = ExifOverlayView(frame: .zero)
     private var loadGeneration = 0
+
+    /// EXIF panel visibility: `E` toggles a persistent pin; hovering the
+    /// right edge of the screen shows it temporarily on top of that.
+    private var exifPinned = false
+    private var exifHovering = false
+    private var exifFieldsCache: [URL: [ExifField]] = [:]
+    private let exifHotZoneWidth: CGFloat = 48
+    private let exifMargin: CGFloat = 20
 
     init(browser: FolderBrowser) {
         self.browser = browser
@@ -22,7 +31,12 @@ final class ImageViewController: NSViewController {
         canvasView.frame = container.bounds
         canvasView.autoresizingMask = [.width, .height]
         canvasView.keyDownHandler = { [weak self] event in self?.handle(event) }
+        canvasView.mouseMovedHandler = { [weak self] point in self?.handleMouseMoved(point) }
+        canvasView.mouseExitedHandler = { [weak self] in self?.setExifHovering(false) }
         container.addSubview(canvasView)
+
+        exifOverlay.isHidden = true
+        container.addSubview(exifOverlay)
 
         hudLabel.frame = NSRect(x: 16, y: 16, width: container.bounds.width - 32, height: 20)
         hudLabel.autoresizingMask = [.width, .maxYMargin]
@@ -74,6 +88,10 @@ final class ImageViewController: NSViewController {
 
         let neighbors = [-2, -1, 1, 2].compactMap { browser.url(offsetFromCurrent: $0) }
         ImageCache.shared.prefetch(urls: neighbors, maxPixelSize: maxPixelSize)
+
+        if exifPinned || exifHovering {
+            refreshExifOverlay()
+        }
     }
 
     private func maxPixelSizeForScreen() -> Int {
@@ -156,6 +174,45 @@ final class ImageViewController: NSViewController {
         (view.window?.windowController as? ImageWindowController)?.closeViewer()
     }
 
+    // MARK: - EXIF panel
+
+    private func handleMouseMoved(_ pointInCanvas: NSPoint) {
+        setExifHovering(pointInCanvas.x >= canvasView.bounds.width - exifHotZoneWidth)
+    }
+
+    private func setExifHovering(_ hovering: Bool) {
+        guard exifHovering != hovering else { return }
+        exifHovering = hovering
+        updateExifVisibility()
+    }
+
+    private func toggleExifPinned() {
+        exifPinned.toggle()
+        updateExifVisibility()
+    }
+
+    private func updateExifVisibility() {
+        let visible = exifPinned || exifHovering
+        exifOverlay.isHidden = !visible
+        if visible {
+            refreshExifOverlay()
+        }
+    }
+
+    private func refreshExifOverlay() {
+        guard let url = browser.currentURL else {
+            exifOverlay.update(fields: [])
+            return
+        }
+        let fields = exifFieldsCache[url] ?? ExifReader.fields(for: url)
+        exifFieldsCache[url] = fields
+
+        let height = exifOverlay.update(fields: fields)
+        let x = view.bounds.width - ExifOverlayView.width - exifMargin
+        let y = (view.bounds.height - height) / 2
+        exifOverlay.frame = NSRect(x: x, y: y, width: ExifOverlayView.width, height: height)
+    }
+
     // MARK: - Key handling
 
     /// Every action is a single key, no modifier required — Shift only
@@ -193,6 +250,8 @@ final class ImageViewController: NSViewController {
             Preferences.chooseLibraryHome()
         case "d":
             DefaultAppRegistration.makeDefaultForNEF()
+        case "e":
+            toggleExifPinned()
         default:
             break
         }
@@ -204,6 +263,9 @@ final class ImageViewController: NSViewController {
 final class ImageCanvasView: NSView {
 
     var keyDownHandler: ((NSEvent) -> Void)?
+    /// Fires with the mouse location in this view's coordinate space.
+    var mouseMovedHandler: ((NSPoint) -> Void)?
+    var mouseExitedHandler: (() -> Void)?
 
     private var image: CGImage?
     private var offset: CGPoint = .zero
@@ -219,6 +281,25 @@ final class ImageCanvasView: NSView {
         } else {
             super.keyDown(with: event)
         }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.activeInKeyWindow, .mouseMoved, .mouseEnteredAndExited, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        ))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        mouseMovedHandler?(convert(event.locationInWindow, from: nil))
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        mouseExitedHandler?()
     }
 
     func setImage(_ image: CGImage?, resetView: Bool) {
