@@ -22,6 +22,13 @@ swift build -c release            # release build
 
 There is no test suite and no linter configured in this repo.
 
+`Scripts/build_app.sh` copies `Resources/AppIcon/Halide.icns` into the app
+bundle (referenced by `CFBundleIconFile` in `Info.plist`). That `.icns` is
+built from `Resources/AppIcon/Halide.iconset` via `iconutil -c icns
+Halide.iconset -o Halide.icns` — regenerate it there if the source PNGs
+change; `Resources/AppIcon/assets/` holds the SVG sources (full icon, mark,
+lockup) for other contexts (menu bar, marketing).
+
 Run the built app on a specific image:
 
 ```sh
