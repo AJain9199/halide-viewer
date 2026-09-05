@@ -22,8 +22,8 @@ enum DefaultAppRegistration {
         Preferences.hasPromptedDefaultApp = true
 
         let alert = NSAlert()
-        alert.messageText = "Make IrisViewer the default for NEF files?"
-        alert.informativeText = "Double-clicking a .nef file in Finder will open it in IrisViewer."
+        alert.messageText = "Make Halide Viewer the default for NEF files?"
+        alert.informativeText = "Double-clicking a .nef file in Finder will open it in Halide Viewer."
         let yes = alert.addButton(withTitle: "Make Default")
         yes.keyEquivalent = "\r"
         let later = alert.addButton(withTitle: "Not Now")

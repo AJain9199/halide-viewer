@@ -14,7 +14,7 @@ final class ImageCache {
 
     private let cache = NSCache<NSURL, CGImageBox>()
     private var inFlight = Set<URL>()
-    private let inFlightQueue = DispatchQueue(label: "IrisViewer.ImageCache.inFlight")
+    private let inFlightQueue = DispatchQueue(label: "HalideViewer.ImageCache.inFlight")
 
     private init() {
         cache.countLimit = 30

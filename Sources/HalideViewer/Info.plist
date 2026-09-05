@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>IrisViewer</string>
+	<string>HalideViewer</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.aryamanjain.IrisViewer</string>
+	<string>com.aryamanjain.HalideViewer</string>
 	<key>CFBundleName</key>
-	<string>IrisViewer</string>
+	<string>Halide Viewer</string>
 	<key>CFBundleDisplayName</key>
-	<string>IrisViewer</string>
+	<string>Halide Viewer</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

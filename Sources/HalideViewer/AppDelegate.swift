@@ -77,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(
-            title: "Quit IrisViewer",
+            title: "Quit Halide Viewer",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )

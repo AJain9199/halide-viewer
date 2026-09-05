@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "IrisViewer",
+    name: "HalideViewer",
     platforms: [
         .macOS(.v13)
     ],
     targets: [
         .executableTarget(
-            name: "IrisViewer",
-            path: "Sources/IrisViewer",
+            name: "HalideViewer",
+            path: "Sources/HalideViewer",
             exclude: ["Info.plist"]
         )
     ]
