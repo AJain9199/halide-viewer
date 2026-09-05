@@ -60,7 +60,9 @@ single-document per launch — closing the viewer terminates the app
   the same key — e.g. `Delete` = trash, `Shift+Delete` = permanent; `M` =
   file into library, `Shift+M` = ad hoc folder). No menu bar or modifier
   chords are used for browsing actions since the menu bar is hidden while
-  viewing.
+  viewing. `ImageCanvasView` also has a third zoom mode, `.clicked(imagePoint:)`,
+  toggled by mouse click: click zooms in centered on the clicked point at
+  `Preferences.clickZoomFactor` × fit scale, re-clicking returns to fit.
 - `ImageLoader` — two decode paths: `loadPreview` pulls the embedded
   full-res JPEG preview out of RAW files via ImageIO (near-instant, used for
   normal browsing), while `loadFullResolution` does a real `CIRAWFilter`

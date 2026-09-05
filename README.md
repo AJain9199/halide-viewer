@@ -76,7 +76,10 @@ keystrokes — no modifier keys, since the menu bar is hidden while browsing.
 | `C` | File into library (copy) |
 | `Shift+C` | Copy to a folder you choose (ad hoc) |
 | `0` | Zoom to fit |
-| `1` | Zoom to actual size (pixel-for-pixel, scroll/trackpad to pan) |
+| `1` | Zoom to actual size (pixel-for-pixel, scroll/trackpad or drag to pan) |
+| Click | Zoom in on the clicked region (centered); click again to zoom back out |
+| Drag | Pan around while zoomed in (also works with scroll/trackpad) |
+| `Z` | Set the click-to-zoom factor (default 2.5×) |
 | `L` | Set a session location label (appended to the filed path) |
 | `P` | Choose/change the library home folder |
 | `D` | Make Halide Viewer the default app for `.nef` files |

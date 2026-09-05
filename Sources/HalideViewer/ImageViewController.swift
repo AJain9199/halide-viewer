@@ -252,14 +252,17 @@ final class ImageViewController: NSViewController {
             DefaultAppRegistration.makeDefaultForNEF()
         case "e":
             toggleExifPinned()
+        case "z":
+            Preferences.promptForClickZoomFactor()
         default:
             break
         }
     }
 }
 
-/// Draws a CGImage centered in the view with a "fit" mode (default) and an
-/// "actual size" mode (pixel-for-pixel, panned via scroll/trackpad).
+/// Draws a CGImage centered in the view with a "fit" mode (default), an
+/// "actual size" mode, and a click-to-zoom mode — the latter two panned via
+/// scroll/trackpad or click-drag.
 final class ImageCanvasView: NSView {
 
     var keyDownHandler: ((NSEvent) -> Void)?
@@ -269,8 +272,18 @@ final class ImageCanvasView: NSView {
 
     private var image: CGImage?
     private var offset: CGPoint = .zero
-    private enum ZoomMode { case fit, actualSize }
+    /// `clicked`'s point is in image pixel space (same units as the image's
+    /// width/height), with the same up/down convention `draw`'s rect uses.
+    private enum ZoomMode: Equatable { case fit, actualSize, clicked(imagePoint: CGPoint) }
     private var mode: ZoomMode = .fit
+
+    /// Distinguishes a plain click (toggles click-zoom) from a click-drag
+    /// (pans) — a drag is only recognized once the mouse moves past this
+    /// many points from where the button went down.
+    private let dragThreshold: CGFloat = 3
+    private var dragOrigin: NSPoint = .zero
+    private var dragStartOffset: CGPoint = .zero
+    private var isDragging = false
 
     override var isFlipped: Bool { false }
     override var acceptsFirstResponder: Bool { true }
@@ -324,10 +337,74 @@ final class ImageCanvasView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        guard mode == .actualSize else { return }
+        guard mode != .fit else { return }
         offset.x += event.scrollingDeltaX
         offset.y -= event.scrollingDeltaY
         needsDisplay = true
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        dragOrigin = convert(event.locationInWindow, from: nil)
+        dragStartOffset = offset
+        isDragging = false
+    }
+
+    /// While zoomed in, dragging pans instead of registering as a click.
+    override func mouseDragged(with event: NSEvent) {
+        guard mode != .fit else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        let dx = point.x - dragOrigin.x
+        let dy = point.y - dragOrigin.y
+        if !isDragging && hypot(dx, dy) > dragThreshold {
+            isDragging = true
+        }
+        guard isDragging else { return }
+        offset = CGPoint(x: dragStartOffset.x + dx, y: dragStartOffset.y + dy)
+        needsDisplay = true
+    }
+
+    /// A plain click (not a drag) zooms in on the clicked region (centered),
+    /// at `Preferences.clickZoomFactor` times "fit" scale; clicking again
+    /// while zoomed in this way zooms back out to fit.
+    override func mouseUp(with event: NSEvent) {
+        guard !isDragging else { isDragging = false; return }
+        guard let image else { return }
+        let imgSize = CGSize(width: image.width, height: image.height)
+        guard imgSize.width > 0, imgSize.height > 0 else { return }
+
+        if case .clicked = mode {
+            mode = .fit
+            offset = .zero
+            needsDisplay = true
+            return
+        }
+
+        let point = convert(event.locationInWindow, from: nil)
+        let (scale, origin) = layout(for: mode, imgSize: imgSize)
+        let imagePoint = CGPoint(x: (point.x - origin.x) / scale, y: (point.y - origin.y) / scale)
+        mode = .clicked(imagePoint: imagePoint)
+        offset = .zero
+        needsDisplay = true
+    }
+
+    /// Scale and draw-rect origin for `mode`, given the current bounds.
+    private func layout(for mode: ZoomMode, imgSize: CGSize) -> (scale: CGFloat, origin: CGPoint) {
+        let fitScale = min(bounds.width / imgSize.width, bounds.height / imgSize.height)
+        switch mode {
+        case .fit:
+            let drawSize = CGSize(width: imgSize.width * fitScale, height: imgSize.height * fitScale)
+            let origin = CGPoint(x: bounds.midX - drawSize.width / 2 + offset.x, y: bounds.midY - drawSize.height / 2 + offset.y)
+            return (fitScale, origin)
+        case .actualSize:
+            let scale = 1.0 / (window?.backingScaleFactor ?? 1.0)
+            let drawSize = CGSize(width: imgSize.width * scale, height: imgSize.height * scale)
+            let origin = CGPoint(x: bounds.midX - drawSize.width / 2 + offset.x, y: bounds.midY - drawSize.height / 2 + offset.y)
+            return (scale, origin)
+        case .clicked(let imagePoint):
+            let scale = fitScale * Preferences.clickZoomFactor
+            let origin = CGPoint(x: bounds.midX - imagePoint.x * scale + offset.x, y: bounds.midY - imagePoint.y * scale + offset.y)
+            return (scale, origin)
+        }
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -338,19 +415,8 @@ final class ImageCanvasView: NSView {
         let imgSize = CGSize(width: image.width, height: image.height)
         guard imgSize.width > 0, imgSize.height > 0 else { return }
 
-        let scale: CGFloat
-        switch mode {
-        case .fit:
-            scale = min(bounds.width / imgSize.width, bounds.height / imgSize.height)
-        case .actualSize:
-            scale = 1.0 / (window?.backingScaleFactor ?? 1.0)
-        }
-
+        let (scale, origin) = layout(for: mode, imgSize: imgSize)
         let drawSize = CGSize(width: imgSize.width * scale, height: imgSize.height * scale)
-        let origin = CGPoint(
-            x: bounds.midX - drawSize.width / 2 + offset.x,
-            y: bounds.midY - drawSize.height / 2 + offset.y
-        )
         let rect = CGRect(origin: origin, size: drawSize)
 
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
