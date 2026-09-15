@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/AJain9199/halide-viewer">
-    <img src="Resources/assets/halide-icon.svg" alt="Logo" width="80" height="80">
+    <img src="Resources/AppIcon/assets/halide-icon.svg" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Halide Viewer</h3>
