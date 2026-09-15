@@ -1,0 +1,73 @@
+name: Release
+
+# Push a tag like `v1.2.0` to build HalideViewer.app, package it as a
+# classic drag-to-Applications .dmg, and attach that to a new GitHub
+# release. The build is ad-hoc code signed (no Apple Developer ID), so
+# first launch requires right-click → Open, or `xattr -cr HalideViewer.app`,
+# to get past Gatekeeper.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set app version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" Sources/HalideViewer/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" Sources/HalideViewer/Info.plist
+
+      - name: Build app bundle
+        run: ./Scripts/build_app.sh
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create DMG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG_NAME="HalideViewer-${VERSION}.dmg"
+
+          mkdir dmg-source
+          cp -R HalideViewer.app dmg-source/
+
+          DMG_ARGS=(
+            --volname "Halide Viewer"
+            --volicon "Resources/AppIcon/Halide.icns"
+            --window-size 540 380
+            --icon-size 128
+            --icon "HalideViewer.app" 130 180
+            --hide-extension "HalideViewer.app"
+            --app-drop-link 410 180
+          )
+
+          # create-dmg's Finder-styling step (custom window size/icon
+          # layout) needs Apple Events access to Finder, which some CI
+          # runners refuse to a non-interactive shell. Fall back to
+          # --skip-jenkins — still a real drag-to-Applications DMG, just
+          # without the custom icon positions — rather than failing the
+          # release over cosmetics.
+          if ! create-dmg "${DMG_ARGS[@]}" "$DMG_NAME" "dmg-source"; then
+            echo "create-dmg failed with Finder styling enabled; retrying with --skip-jenkins"
+            rm -f "$DMG_NAME"
+            create-dmg "${DMG_ARGS[@]}" --skip-jenkins "$DMG_NAME" "dmg-source"
+          fi
+
+          test -f "$DMG_NAME"
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "HalideViewer-${GITHUB_REF_NAME#v}.dmg" \
+            --title "$GITHUB_REF_NAME" --generate-notes
