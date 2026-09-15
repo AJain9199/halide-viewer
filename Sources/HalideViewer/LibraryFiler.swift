@@ -7,11 +7,14 @@ enum FileOpMode { case move, copy }
 enum LibraryFiler {
 
     /// Returns the source URLs that were successfully filed.
-    static func file(_ urls: [URL], mode: FileOpMode, into home: URL) -> [URL] {
+    /// `onFileComplete` fires once per source URL, whether or not it succeeded.
+    @discardableResult
+    static func file(_ urls: [URL], mode: FileOpMode, into home: URL, onFileComplete: () -> Void = {}) -> [URL] {
         var succeeded: [URL] = []
         let label = Preferences.sessionLocationLabel
 
         for url in urls {
+            defer { onFileComplete() }
             let date = ImageLoader.exifCaptureDate(url: url)
                 ?? (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
                 ?? Date()

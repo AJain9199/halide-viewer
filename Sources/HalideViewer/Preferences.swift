@@ -6,6 +6,8 @@ enum Preferences {
     private static let locationLabelKey = "sessionLocationLabel"
     private static let hasPromptedDefaultAppKey = "hasPromptedDefaultApp"
     private static let clickZoomFactorKey = "clickZoomFactor"
+    private static let recentMoveDestinationsKey = "recentMoveDestinations"
+    private static let maxRecentMoveDestinations = 5
     static let defaultClickZoomFactor: CGFloat = 2.5
 
     static var libraryHomeURL: URL? {
@@ -35,20 +37,23 @@ enum Preferences {
         set { defaults.set(Double(newValue), forKey: clickZoomFactorKey) }
     }
 
-    /// Ensures a library home folder is set, prompting via NSOpenPanel if needed.
-    /// Returns nil if the user cancels.
-    @discardableResult
-    static func ensureLibraryHome() -> URL? {
-        if let existing = libraryHomeURL { return existing }
-        let panel = NSOpenPanel()
-        panel.title = "Choose Photo Library Folder"
-        panel.message = "Filed photos will be organized as <this folder>/<year>/<month>/<location>."
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else { return nil }
-        libraryHomeURL = url
-        return url
+    /// Most-recently-used "Move To…" destinations, newest first.
+    static var recentMoveDestinations: [URL] {
+        get {
+            let paths = defaults.stringArray(forKey: recentMoveDestinationsKey) ?? []
+            return paths.map { URL(fileURLWithPath: $0, isDirectory: true) }
+        }
+        set {
+            defaults.set(Array(newValue.prefix(maxRecentMoveDestinations)).map(\.path), forKey: recentMoveDestinationsKey)
+        }
+    }
+
+    /// Promotes `url` to the front of the recent move destinations, adding it if new.
+    static func rememberMoveDestination(_ url: URL) {
+        var recents = recentMoveDestinations
+        recents.removeAll { $0.standardizedFileURL == url.standardizedFileURL }
+        recents.insert(url, at: 0)
+        recentMoveDestinations = recents
     }
 
     /// Lets the user change the library home folder from Preferences.
